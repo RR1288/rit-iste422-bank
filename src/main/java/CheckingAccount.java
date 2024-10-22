@@ -16,6 +16,7 @@ public class CheckingAccount extends Account {
 
     public CheckingAccount() {
         logger.debug("Creating no-arg checking account");
+        logger.warn("Here!! \n\n");
         checkNumber = 0;
     }
 
@@ -23,6 +24,7 @@ public class CheckingAccount extends Account {
         super(name, id, balance, ownerId);
         logger.debug(String.format("Creating checking account for %d: %s, %f",
                ownerId, name, balance));
+        logger.warn("Here!! \n\n");
         this.checkNumber = checkNumber;
     }
 

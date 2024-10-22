@@ -37,7 +37,8 @@ public class SavingsAccount extends Account {
         if (getBalance() < getMinimumBalance()) {
             withdraw(getBelowMinimumFee(), "MINIMUM BALANCE CHARGE");
         }
-        double interest = Math.round(interestRate * getBalance() / 12d * 100d) / 100d;
+        
+        double interest = (interestRate * getBalance() / 12d * 100d) / 100d;
         if (interest > 0d) {
             deposit(interest, "INTEREST");
         }

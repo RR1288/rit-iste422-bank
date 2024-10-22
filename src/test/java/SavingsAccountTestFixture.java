@@ -65,20 +65,36 @@ public class SavingsAccountTestFixture {
 
             // set up account with specified starting balance and interest rate
             // TODO: Add code to create account....
+            SavingsAccount sa = new SavingsAccount(
+                "test "+testNum, -1, scenario.initBalance, 0, -1);
+            
 
             // now process withdrawals, deposits
             // TODO: Add code to process withdrawals....
-
+            for (double withdrawalAmount : scenario.withdrawals) {
+                sa.withdraw(withdrawalAmount);
+            }
             // TODO: Add code to process deposits
+            for (double depositAmount : scenario.deposits) {
+                sa.deposit(depositAmount);
+            }
 
             // run month-end if desired and output register
             if (scenario.runMonthEndNTimes > 0) {
                 // TODO: Add code to run month-end....
+                for (RegisterEntry entry : sa.getRegisterEntries()) {
+                    logger.info("Register Entry {} -- {}: {}", entry.id(), entry.entryName(), entry.amount());
+
+                }
+
+                for (int i = 0; i < scenario.runMonthEndNTimes; i++){
+                    sa.monthEnd();
+                }
             }
 
             // make sure the balance is correct
             // TODO: add code to verify balance
-
+            assertThat("Test #" + testNum + ":" + scenario, sa.getBalance(), is(scenario.endBalance));
         }
     }
 
@@ -111,13 +127,19 @@ public class SavingsAccountTestFixture {
     // NOTE: this could be added to TestScenario class
     private static TestScenario parseScenarioString(String scenarioAsString) {
         String [] scenarioValues = scenarioAsString.split(",");
+        System.out.println(scenarioValues);
         // should probably validate length here
         double initialBalance = Double.parseDouble(scenarioValues[0]);
         // TODO: parse the rest of your fields
+        double interest = Double.parseDouble(scenarioValues[1]);
         List<Double> wds = parseListOfAmounts(scenarioValues[2]);
+        List<Double> deposits = parseListOfAmounts(scenarioValues[3]);
+        int nTimes = Integer.parseInt(scenarioValues[4].strip());
+        double endBalance =  Double.parseDouble(scenarioValues[5]);
+        
         // TODO: Replace these dummy values with _your_ field values to populate TestScenario object
         TestScenario scenario = new TestScenario(
-                initialBalance, 0.0, null, null, 0, 0.0
+                initialBalance, interest, wds, deposits, nTimes, endBalance
         );
         return scenario;
     }
@@ -141,6 +163,18 @@ public class SavingsAccountTestFixture {
         // TODO: Instead of hardcoded "false", determine if tests are coming from file or cmdline
         // Note: testsFromFile is just a suggestion, you don't have to use testsFromFile or even an if/then statement!
         boolean testsFromFile = false;
+        boolean testsFromString = false;
+
+        if (args.length != 0 && args.length % 2 == 0) {
+            if (args[0].equals("-f")) {
+                testsFromFile = true;
+
+            }
+            if (args[0].equals("-s")) {
+                testsFromString = true;
+            }
+            
+        }
 
         // Note: this is just a suggestion, you don't have to use testsFromFile or even an if/then statement!
         if (testsFromFile) {
@@ -148,15 +182,21 @@ public class SavingsAccountTestFixture {
             // TODO: We could get the filename from the cmdline, e.g. "-f CheckingAccountScenarios.csv"
             System.out.println("\n\n****** FROM FILE ******\n");
             // TODO: get filename from cmdline and use instead of TEST_FILE constant
-            List<String> scenarioStringsFromFile = Files.readAllLines(Paths.get(TEST_FILE));
+            List<String> scenarioStringsFromFile = Files
+                .readAllLines(Paths.get(args[1].replace('/', File.separatorChar)));
             // Note: toArray converts from a List to an array
             testScenarios = parseScenarioStrings(scenarioStringsFromFile);
             runJunitTests();
         }
-        else {
+        
+        if (testsFromString){
+            System.out.println("\n\n****** FROM String ******\n");
             // if specifying a scenario on the command line,
             // for example "-t '10, 20|20, , 40|10, 0'"
             // Note the single-quotes above ^^^ because of the embedded spaces and the pipe symbol
+            List<TestScenario> parsedScenarios = parseScenarioStrings(List.of(args[1], args[1]));
+            testScenarios = parsedScenarios;
+
             System.out.println("Command-line arguments passed in: " + java.util.Arrays.asList(args));
             // TODO: write the code to "parse" scenario into a suitable string
             // TODO: get TestScenario object from above string and store to testScenarios static var

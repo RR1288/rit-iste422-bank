@@ -28,6 +28,14 @@ task runCheckingFixture(type: JavaExec) {
     description = "Run CheckingAccountTestFixture class"
     classpath = sourceSets.test.runtimeClasspath
     main = "CheckingAccountTestFixture"
+    systemProperty "filename", findProperty("filename")
+}
+
+task runSavingsFixture(type: JavaExec) {
+    group = "Execution"
+    description = "Run SavingsAccountTestFixture class"
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "SavingsAccountTestFixture"
 }
 
 task obfuscator(type: JavaExec) {
