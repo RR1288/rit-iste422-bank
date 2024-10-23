@@ -39,6 +39,7 @@ public class SavingsAccount extends Account {
         }
         
         double interest = (interestRate * getBalance() / 12d * 100d) / 100d;
+
         if (interest > 0d) {
             deposit(interest, "INTEREST");
         }

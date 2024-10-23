@@ -65,8 +65,9 @@ public class SavingsAccountTestFixture {
 
             // set up account with specified starting balance and interest rate
             // TODO: Add code to create account....
+            //String name, long id, double balance, double interestRate, long ownerId
             SavingsAccount sa = new SavingsAccount(
-                "test "+testNum, -1, scenario.initBalance, 0, -1);
+                "test "+testNum, -1, scenario.initBalance, scenario.interestRate, -1);
             
 
             // now process withdrawals, deposits
@@ -94,7 +95,7 @@ public class SavingsAccountTestFixture {
 
             // make sure the balance is correct
             // TODO: add code to verify balance
-            assertThat("Test #" + testNum + ":" + scenario, sa.getBalance(), is(scenario.endBalance));
+            assertThat("Test #" + testNum + ":" + scenario, Math.round(sa.getBalance()*100d)/100d, is(scenario.endBalance));
         }
     }
 
