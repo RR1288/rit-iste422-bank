@@ -16,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Collections;
 
 public class CheckingAccountTestFixture {
     public static Logger logger = LogManager.getLogger(CheckingAccountTestFixture.class);
@@ -71,9 +72,9 @@ public class CheckingAccountTestFixture {
             // run month-end if desired and output register
             if (scenario.runMonthEnd) {
                 ca.monthEnd();
+
                 for (RegisterEntry entry : ca.getRegisterEntries()) {
                     logger.info("Register Entry {} -- {}: {}", entry.id(), entry.entryName(), entry.amount());
-
                 }
             }
 
@@ -111,14 +112,23 @@ public class CheckingAccountTestFixture {
     // TODO this could be added to TestScenario class
     private static TestScenario parseScenarioString(String scenarioAsString) {
         String [] scenarioValues = scenarioAsString.split(",");
+        System.out.println(scenarioValues.toString());
         // should probably validate length here
         double initialBalance = Double.parseDouble(scenarioValues[0]);
         List<Double> checks = parseListOfAmounts(scenarioValues[1]);
         List<Double> wds = parseListOfAmounts(scenarioValues[2]);
         List<Double> deps = parseListOfAmounts(scenarioValues[3]);
-        double finalBalance = Double.parseDouble(scenarioValues[4]);
+        double finalBalance = Double.parseDouble(scenarioValues[5]);
+
+        boolean runMonthEnd;
+        if (scenarioValues[4].equals("true")){
+            runMonthEnd = true ;
+        } else {
+            runMonthEnd = false ;
+        }
+
         TestScenario scenario = new TestScenario(
-                initialBalance, checks, wds, deps, false, finalBalance
+                initialBalance, checks, wds, deps, runMonthEnd, finalBalance
         );
         return scenario;
     }
@@ -156,10 +166,10 @@ public class CheckingAccountTestFixture {
         // Same scenarios as above plus one more to verify it's running these string scenarios
         System.out.println("\n\n****** FROM STRINGS ******\n");
         List<String> scenarioStrings = List.of(
-                "0, , , 10|20, 30",
-                "100, , , , 100",
-                "100, 10, , , 90",
-                "100, 10|20, , 10, 80"
+                "0, , , 10|20, false, 30",
+                "100, , , , false, 100",
+                "100, 10, , , true, 90",
+                "100, 10|20, , 10, true, 80"
         );
         List<TestScenario> parsedScenarios = parseScenarioStrings(scenarioStrings);
         testScenarios = parsedScenarios;
@@ -175,10 +185,47 @@ public class CheckingAccountTestFixture {
         runJunitTests();
 
         // ...or, we could also specify a single scenario on the command line,
-        // for example "-t '10, 20|20, , 40|10, 0'"
+        // for example "-t '10, 20|20, , 40|10, true, 0'"
         // Note the single-quotes because of the embedded spaces and the pipe symbol
         System.out.println("Command-line arguments passed in: " + java.util.Arrays.asList(args));
+        boolean testsFromFile = false;
+        boolean testsFromString = false;
+
+        if (args.length != 0 && args.length % 2 == 0) {
+            if (args[0].equals("-f")) {
+                testsFromFile = true;
+            }
+            if (args[0].equals("-s")) {
+                testsFromString = true;
+            }
+        }
+
+        // Note: this is just a suggestion, you don't have to use testsFromFile or even an if/then statement!
+        if (testsFromFile) {
+            // if populating with scenarios from a CSV file...
+            // TODO: We could get the filename from the cmdline, e.g. "-f CheckingAccountScenarios.csv"
+            System.out.println("\n\n****** FROM FILE (cmd)******\n");
+            // TODO: get filename from cmdline and use instead of TEST_FILE constant
+            List<String> scenarioStringsFromFileCMD = Files
+                .readAllLines(Paths.get(args[1].replace('/', File.separatorChar)));
+            // Note: toArray converts from a List to an array
+            testScenarios = parseScenarioStrings(scenarioStringsFromFileCMD);
+            runJunitTests();
+        }
         
+        if (testsFromString){
+            System.out.println("\n\n****** FROM String (cmd) ******\n");
+            // if specifying a scenario on the command line,
+            // for example "-t '10, 20|20, , 40|10, 0'"
+            // Note the single-quotes above ^^^ because of the embedded spaces and the pipe symbol
+            List<TestScenario> parsedScenariosCMD = parseScenarioStrings(Collections.singletonList(args[1]));
+            testScenarios = parsedScenariosCMD;
+
+            // TODO: write the code to "parse" scenario into a suitable string
+            // TODO: get TestScenario object from above string and store to testScenarios static var
+            runJunitTests();
+        }
+        System.out.println("Command-line arguments passed in: " + java.util.Arrays.asList(args));
         System.out.println("DONE");
     }
 }
