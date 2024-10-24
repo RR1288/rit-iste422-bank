@@ -16,7 +16,7 @@ To run the tests, use the following Gradle commands depending on which fixture y
 ### CheckingAccountTestFixture:
 - **Run with string scenario input:**
     ```
-    gradle runCheckingFixture --args="-s '100, 10|20, , 10, 80'"
+    gradle runCheckingFixture --args="-s '100, 10|20, , 10, true, 80'"
     ```
 
 - **Run with file input:**
@@ -43,7 +43,7 @@ The `CheckingAccountTestFixture` takes test scenarios in the following format:
 ```
 For example:
 ```
-"100, 10|20, , 10, 80"
+"100, 10|20, , 10, true, 80"
 ```
 This simulates a checking account with an initial balance of $100, where two checks of $10 and $20 are issued, and a deposit of $10 is made over the course of 80 months.
 
