@@ -24,7 +24,3 @@ Obfuscation Methods
 5. **Date Shifting**
    - Adjusts register entry dates by adding 7 days to the original date.
    - Why: Obscures specific transaction timing while retaining chronological order.
-
-6. **Randomized Entry Amount**
-   - Replaces transaction amounts with randomized values between $10.00 and $1,000.00, rounded to two decimal places.
-   - Why: Mantains realistic ranges for transactions.

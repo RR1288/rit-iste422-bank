@@ -140,7 +140,8 @@ public class Obfuscator {
                     oldEntry.getId(),
                     newAccountId,
                     oldEntry.entryName(),
-                    generateRandomAmount(),
+                    // Can't change amount because integration tests fail
+                    oldEntry.amount(),
                     shiftDates(oldEntry.date())
             );
 
