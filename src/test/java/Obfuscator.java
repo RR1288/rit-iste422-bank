@@ -53,6 +53,12 @@ public class Obfuscator {
         return (long) (Math.random() * 1_000_000_000L);  // Random 9-digit account number
     }
 
+    private double generateRandomAmount() {
+        double minAmount = 10.0; // Minimum amount
+        double maxAmount = 1000.0; // Maximum amount
+        return Math.round((Math.random() * (maxAmount - minAmount) + minAmount) * 100.0) / 100.0;
+    }
+
     public static Date shiftDates(Date date) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
@@ -101,7 +107,7 @@ public class Obfuscator {
             Account newAccount;
             if (oldAccount instanceof CheckingAccount ca) {
                 newAccount = new CheckingAccount(
-                        ca.getName(),
+                        shuffleString(ca.getName()),
                         generateRandomAccountNumber(), // Generate a new account number
                         ca.getBalance(),
                         ca.getCheckNumber(),
@@ -109,7 +115,7 @@ public class Obfuscator {
                 );
             } else if (oldAccount instanceof SavingsAccount sa) {
                 newAccount = new SavingsAccount(
-                        sa.getName(),
+                        shuffleString(sa.getName()),
                         generateRandomAccountNumber(),
                         sa.getBalance(),
                         sa.getInterestRate(),
@@ -134,7 +140,7 @@ public class Obfuscator {
                     oldEntry.getId(),
                     newAccountId,
                     oldEntry.entryName(),
-                    oldEntry.amount(),
+                    generateRandomAmount(),
                     shiftDates(oldEntry.date())
             );
 
