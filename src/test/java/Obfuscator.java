@@ -1,5 +1,3 @@
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -8,29 +6,125 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-record BankRecords(Collection<Owner> owners, Collection<Account> accounts, Collection<RegisterEntry> registerEntries) { }
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+record BankRecords(Collection<Owner> owners, Collection<Account> accounts, Collection<RegisterEntry> registerEntries) {
+
+}
 
 public class Obfuscator {
+
     private static Logger logger = LogManager.getLogger(Obfuscator.class.getName());
+    private ObfuscatorUtils obsUtils = new ObfuscatorUtils();
+
+    private Date generateRandomDOB() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.YEAR, (int) (Math.random() * (2000 - 1960) + 1960)); // Random year between 1960 and 2000
+        calendar.set(Calendar.MONTH, (int) (Math.random() * 12)); // Random month
+        calendar.set(Calendar.DAY_OF_MONTH, (int) (Math.random() * 28)); // Random day
+        return calendar.getTime();
+    }
+
+    private String shuffleString(String original) {
+        char[] characters = original.toCharArray();
+        List<Character> charList = new ArrayList<>();
+        for (char c : characters) {
+            charList.add(c);
+        }
+        Collections.shuffle(charList);
+        StringBuilder shuffled = new StringBuilder();
+        for (Character c : charList) {
+            shuffled.append(c);
+        }
+        return shuffled.toString();
+    }
+
+    private long generateRandomAccountNumber() {
+        return (long) (Math.random() * 1_000_000_000L);  // Random 9-digit account number
+    }
+
+    private long getNewOwnerIdForAccount(long oldOwnerId, Collection<Owner> obfuscatedOwners) {
+        // Find the new obfuscated owner ID corresponding to the old one
+        for (Owner o : obfuscatedOwners) {
+            if (o.getId() == oldOwnerId) {
+                return o.getId(); // Return new obfuscated ownerId
+            }
+        }
+        throw new IllegalArgumentException("Owner ID not found");
+    }
+
+    private long getNewAccountIdForRegisterEntry(long oldAccountId, Collection<Account> obfuscatedAccounts) {
+        for (Account a : obfuscatedAccounts) {
+            if (a.getId() == oldAccountId) {
+                return a.getId(); // Return new obfuscated accountId
+            }
+        }
+        throw new IllegalArgumentException("Account ID not found");
+    }
 
     public BankRecords obfuscate(BankRecords rawObjects) {
-        // TODO: Obfuscate and return the records! Fill these in with your own
-        // Example: mask SSN
+
+        // OWNERS ==========================================================
         List<Owner> newOwners = new ArrayList<>();
         for (Owner o : rawObjects.owners()) {
+            // Mask SSN
             String new_ssn = "***-**-" + o.ssn().substring(7);
-            // other changes...
-            newOwners.add(new Owner(o.name(), o.id(), o.dob(), new_ssn, o.address(), o.address2(), o.city(), o.state(), o.zip()));
+
+            // Substitute name
+            //String new_name = "Obfuscated Name";
+
+            // Substitute dob
+            Date new_dob = generateRandomDOB();
+
+            // Shuffle address
+            String new_address = shuffleString(o.address());
+            String new_address2 = shuffleString(o.address2());
+
+            // Shuffle city
+            String new_city = shuffleString(o.city());
+
+            newOwners.add(new Owner(o.name(), o.id(), new_dob, new_ssn, new_address, new_address2, new_city, o.state(), o.zip()));
         }
+
         Collection<Owner> obfuscatedOwners = newOwners;
-        Collection<Account> obfuscatedAccounts = rawObjects.accounts();
-        Collection<RegisterEntry> obfuscatedRegisterEntries = rawObjects.registerEntries();
+
+        // ACCOUNTS ==========================================================
+        List<Account> newAccounts = new ArrayList<>();
+
+        for (Account a : rawObjects.accounts()) {
+            // Replace the ownerId with a new random ID or a corresponding obfuscated ID
+            long newOwnerId = getNewOwnerIdForAccount(a.getOwnerId(), obfuscatedOwners);
+            Account newAccount;
+            if (a instanceof CheckingAccount) {
+                CheckingAccount ca = (CheckingAccount) a;
+                newAccount = new CheckingAccount(ca.getName(), a.getId(), ca.getBalance(), ca.getCheckNumber(), newOwnerId);
+            } else if (a instanceof SavingsAccount) {
+                SavingsAccount sa = (SavingsAccount) a;
+                newAccount = new SavingsAccount(sa.getName(), a.getId(), sa.getBalance(), sa.getInterestRate(), newOwnerId);
+            } else {
+                continue; // Handle other account types as needed
+            }
+            newAccounts.add(newAccount);
+        }
+        Collection<Account> obfuscatedAccounts = newAccounts;
+
+        // ENTRIES ==========================================================
+        List<RegisterEntry> newRegisterEntries = new ArrayList<>();
+        for (RegisterEntry re : rawObjects.registerEntries()) {
+            long newAccountId = getNewAccountIdForRegisterEntry(re.accountId(), obfuscatedAccounts);
+            newRegisterEntries.add(new RegisterEntry(re.getId(), newAccountId, re.entryName(), re.amount(), re.date()));
+        }
+        Collection<RegisterEntry> obfuscatedRegisterEntries = newRegisterEntries;
 
         return new BankRecords(obfuscatedOwners, obfuscatedAccounts, obfuscatedRegisterEntries);
     }
@@ -39,13 +133,13 @@ public class Obfuscator {
      * Change the integration test suite to point to our obfuscated production
      * records.
      *
-     * To use the original integration test suite files run
-     *   "git checkout -- src/test/resources/persister_integ.properties"
+     * To use the original integration test suite files run "git checkout --
+     * src/test/resources/persister_integ.properties"
      */
     public void updateIntegProperties() throws IOException {
         Properties props = new Properties();
         File propsFile = new File("src/test/resources/persister_integ.properties".replace('/', File.separatorChar));
-        if (! propsFile.exists() || !propsFile.canWrite()) {
+        if (!propsFile.exists() || !propsFile.canWrite()) {
             throw new RuntimeException("Properties file must exist and be writable: " + propsFile);
         }
         try (InputStream propsStream = new FileInputStream(propsFile)) {
@@ -55,9 +149,9 @@ public class Obfuscator {
         logger.info("Updating properties file '{}'", propsFile);
         try (OutputStream propsStream = new FileOutputStream(propsFile)) {
             String comment = String.format(
-                    "Note: Don't check in changes to this file!!\n" +
-                    "#Modified by %s\n" +
-                    "#to reset run 'git checkout -- %s'",
+                    "Note: Don't check in changes to this file!!\n"
+                    + "#Modified by %s\n"
+                    + "#to reset run 'git checkout -- %s'",
                     this.getClass().getName(), propsFile);
             props.store(propsStream, comment);
         }
@@ -96,7 +190,7 @@ public class Obfuscator {
                 .stream()
                 .collect(Collectors.groupingBy(rec -> rec.getClass()));
         Persister.writeRecordsToCsv(splitAccounts.get(SavingsAccount.class), "savings");
-        Persister.writeRecordsToCsv(splitAccounts.get(CheckingAccount.class),"checking");
+        Persister.writeRecordsToCsv(splitAccounts.get(CheckingAccount.class), "checking");
         Persister.writeRecordsToCsv(obfuscatedRecords.registerEntries(), "register");
 
         logger.info("Original   record counts: {} owners, {} accounts, {} registers",
@@ -108,11 +202,14 @@ public class Obfuscator {
                 obfuscatedRecords.accounts().size(),
                 obfuscatedRecords.registerEntries().size());
 
-        if (obfuscatedRecords.owners().size() != originalRecords.owners().size())
+        if (obfuscatedRecords.owners().size() != originalRecords.owners().size()) {
             throw new AssertionError("Owners count mismatch");
-        if (obfuscatedRecords.accounts().size() != originalRecords.accounts().size())
+        }
+        if (obfuscatedRecords.accounts().size() != originalRecords.accounts().size()) {
             throw new AssertionError("Account count mismatch");
-        if (obfuscatedRecords.registerEntries().size() != originalRecords.registerEntries().size())
+        }
+        if (obfuscatedRecords.registerEntries().size() != originalRecords.registerEntries().size()) {
             throw new AssertionError("RegisterEntries count mismatch");
+        }
     }
 }
