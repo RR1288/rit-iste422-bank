@@ -25,8 +25,7 @@ record BankRecords(Collection<Owner> owners, Collection<Account> accounts, Colle
 
 public class Obfuscator {
 
-    private static Logger logger = LogManager.getLogger(Obfuscator.class.getName());
-    private ObfuscatorUtils obsUtils = new ObfuscatorUtils();
+    private static final Logger logger = LogManager.getLogger(Obfuscator.class.getName());
 
     private Date generateRandomDOB() {
         Calendar calendar = Calendar.getInstance();
@@ -54,14 +53,11 @@ public class Obfuscator {
         return (long) (Math.random() * 1_000_000_000L);  // Random 9-digit account number
     }
 
-    private long getNewOwnerIdForAccount(long oldOwnerId, Collection<Owner> obfuscatedOwners) {
-        // Find the new obfuscated owner ID corresponding to the old one
-        for (Owner o : obfuscatedOwners) {
-            if (o.getId() == oldOwnerId) {
-                return o.getId(); // Return new obfuscated ownerId
-            }
-        }
-        throw new IllegalArgumentException("Owner ID not found");
+    public static Date shiftDates(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.DATE, 7); // Add 7 days
+        return calendar.getTime();
     }
 
     public BankRecords obfuscate(BankRecords rawObjects) {
@@ -139,7 +135,7 @@ public class Obfuscator {
                     newAccountId,
                     oldEntry.entryName(),
                     oldEntry.amount(),
-                    oldEntry.date()
+                    shiftDates(oldEntry.date())
             );
 
             // Add to the new register entries list
@@ -169,10 +165,10 @@ public class Obfuscator {
         props.setProperty("persisted.suffix", "_prod");
         logger.info("Updating properties file '{}'", propsFile);
         try (OutputStream propsStream = new FileOutputStream(propsFile)) {
-            String comment = String.format(
-                    "Note: Don't check in changes to this file!!\n"
-                    + "#Modified by %s\n"
-                    + "#to reset run 'git checkout -- %s'",
+            String comment = String.format("""
+                                           Note: Don't check in changes to this file!!
+                                           #Modified by %s
+                                           #to reset run 'git checkout -- %s'""",
                     this.getClass().getName(), propsFile);
             props.store(propsStream, comment);
         }
