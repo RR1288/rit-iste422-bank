@@ -53,12 +53,6 @@ public class Obfuscator {
         return (long) (Math.random() * 1_000_000_000L);  // Random 9-digit account number
     }
 
-    private double generateRandomAmount() {
-        double minAmount = 10.0; // Minimum amount
-        double maxAmount = 1000.0; // Maximum amount
-        return Math.round((Math.random() * (maxAmount - minAmount) + minAmount) * 100.0) / 100.0;
-    }
-
     public static Date shiftDates(Date date) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
