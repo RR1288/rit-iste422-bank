@@ -10,6 +10,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -63,69 +64,89 @@ public class Obfuscator {
         throw new IllegalArgumentException("Owner ID not found");
     }
 
-    private long getNewAccountIdForRegisterEntry(long oldAccountId, Collection<Account> obfuscatedAccounts) {
-        for (Account a : obfuscatedAccounts) {
-            if (a.getId() == oldAccountId) {
-                return a.getId(); // Return new obfuscated accountId
-            }
-        }
-        throw new IllegalArgumentException("Account ID not found");
-    }
-
     public BankRecords obfuscate(BankRecords rawObjects) {
+        Map<Long, Long> ownerIdMapping = new HashMap<>();
+        Map<Long, Long> accountIdMapping = new HashMap<>();
 
         // OWNERS ==========================================================
-        List<Owner> newOwners = new ArrayList<>();
-        for (Owner o : rawObjects.owners()) {
-            // Mask SSN
-            String new_ssn = "***-**-" + o.ssn().substring(7);
+        List<Owner> obfuscatedOwners = new ArrayList<>();
+        for (Owner oldOwner : rawObjects.owners()) {
+            // Generate obfuscated attributes
+            String newSSN = "***-**-" + oldOwner.ssn().substring(7);
+            String newName = shuffleString(oldOwner.name());
+            Date newDOB = generateRandomDOB();
+            String newAddress = shuffleString(oldOwner.address());
+            String newAddress2 = shuffleString(oldOwner.address2());
+            String newCity = shuffleString(oldOwner.city());
 
-            // Substitute name
-            //String new_name = "Obfuscated Name";
+            // Create a new owner object with the obfuscated data
+            Owner newOwner = new Owner(
+                    newName,
+                    oldOwner.id(), // Retain old ID initially for consistent mapping
+                    newDOB,
+                    newSSN,
+                    newAddress,
+                    newAddress2,
+                    newCity,
+                    oldOwner.state(),
+                    oldOwner.zip()
+            );
 
-            // Substitute dob
-            Date new_dob = generateRandomDOB();
-
-            // Shuffle address
-            String new_address = shuffleString(o.address());
-            String new_address2 = shuffleString(o.address2());
-
-            // Shuffle city
-            String new_city = shuffleString(o.city());
-
-            newOwners.add(new Owner(o.name(), o.id(), new_dob, new_ssn, new_address, new_address2, new_city, o.state(), o.zip()));
+            // Add to the new owners list and map the old ID to the new ID
+            obfuscatedOwners.add(newOwner);
+            ownerIdMapping.put(oldOwner.id(), newOwner.id());
         }
 
-        Collection<Owner> obfuscatedOwners = newOwners;
+        // ACCOUNTS ========================================================
+        List<Account> obfuscatedAccounts = new ArrayList<>();
+        for (Account oldAccount : rawObjects.accounts()) {
+            long newOwnerId = ownerIdMapping.get(oldAccount.getOwnerId()); // Get updated owner ID
 
-        // ACCOUNTS ==========================================================
-        List<Account> newAccounts = new ArrayList<>();
-
-        for (Account a : rawObjects.accounts()) {
-            // Replace the ownerId with a new random ID or a corresponding obfuscated ID
-            long newOwnerId = getNewOwnerIdForAccount(a.getOwnerId(), obfuscatedOwners);
             Account newAccount;
-            if (a instanceof CheckingAccount) {
-                CheckingAccount ca = (CheckingAccount) a;
-                newAccount = new CheckingAccount(ca.getName(), a.getId(), ca.getBalance(), ca.getCheckNumber(), newOwnerId);
-            } else if (a instanceof SavingsAccount) {
-                SavingsAccount sa = (SavingsAccount) a;
-                newAccount = new SavingsAccount(sa.getName(), a.getId(), sa.getBalance(), sa.getInterestRate(), newOwnerId);
+            if (oldAccount instanceof CheckingAccount ca) {
+                newAccount = new CheckingAccount(
+                        ca.getName(),
+                        generateRandomAccountNumber(), // Generate a new account number
+                        ca.getBalance(),
+                        ca.getCheckNumber(),
+                        newOwnerId
+                );
+            } else if (oldAccount instanceof SavingsAccount sa) {
+                newAccount = new SavingsAccount(
+                        sa.getName(),
+                        generateRandomAccountNumber(),
+                        sa.getBalance(),
+                        sa.getInterestRate(),
+                        newOwnerId
+                );
             } else {
-                continue; // Handle other account types as needed
+                continue; // In case new account types are added
             }
-            newAccounts.add(newAccount);
-        }
-        Collection<Account> obfuscatedAccounts = newAccounts;
 
-        // ENTRIES ==========================================================
-        List<RegisterEntry> newRegisterEntries = new ArrayList<>();
-        for (RegisterEntry re : rawObjects.registerEntries()) {
-            long newAccountId = getNewAccountIdForRegisterEntry(re.accountId(), obfuscatedAccounts);
-            newRegisterEntries.add(new RegisterEntry(re.getId(), newAccountId, re.entryName(), re.amount(), re.date()));
+            // Add to the new accounts list and map the old ID to the new ID
+            obfuscatedAccounts.add(newAccount);
+            accountIdMapping.put(oldAccount.getId(), newAccount.getId());
         }
-        Collection<RegisterEntry> obfuscatedRegisterEntries = newRegisterEntries;
 
+        // REGISTER ENTRIES ================================================
+        List<RegisterEntry> obfuscatedRegisterEntries = new ArrayList<>();
+        for (RegisterEntry oldEntry : rawObjects.registerEntries()) {
+            long newAccountId = accountIdMapping.get(oldEntry.accountId()); // Get updated account ID
+
+            // Create a new register entry
+            RegisterEntry newEntry = new RegisterEntry(
+                    oldEntry.getId(),
+                    newAccountId,
+                    oldEntry.entryName(),
+                    oldEntry.amount(),
+                    oldEntry.date()
+            );
+
+            // Add to the new register entries list
+            obfuscatedRegisterEntries.add(newEntry);
+        }
+
+        // Return a new BankRecords object with the obfuscated data
         return new BankRecords(obfuscatedOwners, obfuscatedAccounts, obfuscatedRegisterEntries);
     }
 
